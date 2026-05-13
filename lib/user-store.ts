@@ -8,6 +8,7 @@ export type StoredUser = {
   passwordHash: string
   role: 'student' | 'educator'
   enrollmentId?: string
+  subject?: string // For educators
 }
 
 export type GroupInvite = {
@@ -41,6 +42,19 @@ async function ensureAuthSchema() {
       password_hash text not null,
       role text not null check (role in ('student', 'educator')),
       enrollment_id text,
+      subject text,
+      created_at timestamptz not null default now()
+    );
+  `)
+  await pool.query(`
+    create table if not exists educator_student_credentials (
+      id text primary key,
+      educator_id text not null references users(id) on delete cascade,
+      student_id text references users(id) on delete set null,
+      student_name text not null,
+      student_email text not null,
+      enrollment_number text,
+      password text not null,
       created_at timestamptz not null default now()
     );
   `)
@@ -79,6 +93,7 @@ function rowToUser(row: any): StoredUser {
     passwordHash: String(row.password_hash),
     role: row.role === 'educator' ? 'educator' : 'student',
     enrollmentId: row.enrollment_id ? String(row.enrollment_id) : undefined,
+    subject: row.subject ? String(row.subject) : undefined,
   }
 }
 
@@ -131,6 +146,7 @@ export async function createUser(input: {
   name: string
   password: string
   role: 'student' | 'educator'
+  subject?: string
 }): Promise<StoredUser> {
   await ensureSeedUsers()
   const pool = getPool()
@@ -143,7 +159,7 @@ export async function createUser(input: {
     input.role === 'student'
       ? `STU-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
       : `EDU-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
-      
+
   const passwordHash = await bcrypt.hash(input.password, 10)
 
   const enrollmentId =
@@ -151,14 +167,116 @@ export async function createUser(input: {
 
   const inserted = await pool.query(
     `
-      insert into users (id, email, name, password_hash, role, enrollment_id)
-      values ($1, $2, $3, $4, $5, $6)
+      insert into users (id, email, name, password_hash, role, enrollment_id, subject)
+      values ($1, $2, $3, $4, $5, $6, $7)
       returning *
     `,
-    [id, lower, input.name.trim(), passwordHash, input.role, enrollmentId]
+    [id, lower, input.name.trim(), passwordHash, input.role, enrollmentId, input.subject || null]
   )
 
   return rowToUser(inserted.rows[0])
+}
+
+function generateRandomPassword(length = 10): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+  let password = ''
+  for (let i = 0; i < length; i++) {
+    password += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return password
+}
+
+export type StudentCredential = {
+  id: string
+  educatorId: string
+  studentId: string | null
+  studentName: string
+  studentEmail: string
+  enrollmentNumber: string
+  password: string
+  createdAt: string
+}
+
+export async function createStudentCredentials(educatorId: string, students: {
+  name: string
+  email: string
+  enrollmentNumber?: string
+}[]): Promise<StudentCredential[]> {
+  await ensureSeedUsers()
+  const pool = getPool()
+  const credentials: StudentCredential[] = []
+
+  for (const student of students) {
+    const lowerEmail = student.email.toLowerCase()
+    const password = generateRandomPassword()
+    const passwordHash = await bcrypt.hash(password, 10)
+
+    // Check if student user already exists
+    let existingUser = await pool.query('select id from users where lower(email) = $1', [lowerEmail])
+    let studentId: string
+
+    if (existingUser.rowCount > 0) {
+      studentId = existingUser.rows[0].id
+      // Update existing user's password
+      await pool.query('update users set password_hash = $1 where id = $2', [passwordHash, studentId])
+    } else {
+      // Create new student user
+      const id = `STU-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
+      const enrollmentId = student.enrollmentNumber || `EN-${Date.now().toString(36).toUpperCase()}`
+      await pool.query(
+        `insert into users (id, email, name, password_hash, role, enrollment_id) values ($1, $2, $3, $4, 'student', $5)`,
+        [id, lowerEmail, student.name.trim(), passwordHash, enrollmentId]
+      )
+      studentId = id
+    }
+
+    // Save credential record
+    const credId = `CRED-${crypto.randomUUID().slice(0, 12).toUpperCase()}`
+    await pool.query(
+      `insert into educator_student_credentials (id, educator_id, student_id, student_name, student_email, enrollment_number, password)
+       values ($1, $2, $3, $4, $5, $6, $7)`,
+      [credId, educatorId, studentId, student.name, lowerEmail, student.enrollmentNumber || '', password]
+    )
+
+    credentials.push({
+      id: credId,
+      educatorId,
+      studentId,
+      studentName: student.name,
+      studentEmail: lowerEmail,
+      enrollmentNumber: student.enrollmentNumber || '',
+      password,
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  return credentials
+}
+
+export async function getEducatorCredentials(educatorId: string): Promise<StudentCredential[]> {
+  await ensureSeedUsers()
+  const pool = getPool()
+  const res = await pool.query(
+    'select * from educator_student_credentials where educator_id = $1 order by created_at desc',
+    [educatorId]
+  )
+  return res.rows.map((row: any) => ({
+    id: String(row.id),
+    educatorId: String(row.educator_id),
+    studentId: row.student_id ? String(row.student_id) : null,
+    studentName: String(row.student_name),
+    studentEmail: String(row.student_email),
+    enrollmentNumber: String(row.enrollment_number),
+    password: String(row.password),
+    createdAt: new Date(row.created_at).toISOString(),
+  }))
+}
+
+export async function updateUserPassword(userId: string, newPassword: string): Promise<void> {
+  await ensureSeedUsers()
+  const pool = getPool()
+  const passwordHash = await bcrypt.hash(newPassword, 10)
+  await pool.query('update users set password_hash = $1 where id = $2', [passwordHash, userId])
 }
 
 export async function verifyPassword(user: StoredUser, password: string): Promise<boolean> {

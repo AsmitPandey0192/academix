@@ -11,6 +11,7 @@ const bodySchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   role: z.enum(['student', 'educator']),
+  subject: z.string().optional(),
 })
 
 export async function POST(request: Request) {
@@ -22,9 +23,9 @@ export async function POST(request: Request) {
       const first = Object.values(msg).flat()[0]
       return NextResponse.json({ error: first ?? 'Invalid request body' }, { status: 400 })
     }
-    const { name, email, password, role } = parsed.data
+    const { name, email, password, role, subject } = parsed.data
 
-    const user = await createUser({ name, email, password, role })
+    const user = await createUser({ name, email, password, role, subject: role === 'educator' ? subject : undefined })
     const token = await signSession(userToSessionPayload(user))
     const cookieStore = await cookies()
     cookieStore.set(SESSION_COOKIE, token, {

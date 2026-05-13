@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   ArrowRight,
   BarChart3,
@@ -15,133 +16,219 @@ import {
   Users,
 } from 'lucide-react'
 
+const features = [
+  {
+    icon: LineChart,
+    title: 'Performance Trends',
+    description: 'Track student progress with visual charts and predictive analytics.',
+  },
+  {
+    icon: Users,
+    title: 'Dual Dashboard',
+    description: 'Separate views for students to track goals and educators to manage cohorts.',
+  },
+  {
+    icon: Shield,
+    title: 'Secure Auth',
+    description: 'JWT sessions with HTTP-only cookies and protected routes.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Analytics Overview',
+    description: 'Performance distribution, at-risk alerts, and class insights.',
+  },
+  {
+    icon: BookOpen,
+    title: 'Goals & Subjects',
+    description: 'Students track goals and performance across multiple courses.',
+  },
+  {
+    icon: GraduationCap,
+    title: 'AI Insights',
+    description: 'Gemini-powered narrative analysis of student data.',
+  },
+]
+
 export default function LandingPage() {
   const { user } = useAuth()
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
-        {user ? (
-          <Button asChild variant="outline" size="sm">
-            <Link
-              href={user.role === 'student' ? '/dashboard/student' : '/dashboard/educator'}
-            >
-              Dashboard
-            </Link>
-          </Button>
-        ) : (
-          <Button asChild size="sm">
-            <Link href="/auth">Sign in</Link>
-          </Button>
-        )}
-        <ThemeToggle />
-      </div>
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <img src="/logo.png" alt="AcademiX Logo" width={40} height={40} className="object-contain rounded-sm" />
+            <span className="text-xl font-semibold tracking-tight">AcademiX</span>
+          </Link>
 
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[min(100vw,42rem)] h-[min(100vw,42rem)] bg-primary/8 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[min(100vw,36rem)] h-[min(100vw,36rem)] bg-secondary/8 rounded-full blur-3xl" />
-      </div>
-
-      <main className="relative z-10">
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20 md:pt-32 md:pb-28">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground mb-8">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            Student result prediction, built for clarity
+          <div className="flex items-center gap-3">
+            {user ? (
+              <Button asChild variant="ghost" size="sm">
+                <Link href={user.role === 'student' ? '/dashboard/student' : '/dashboard/educator'}>
+                  Dashboard
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild size="sm">
+                <Link href="/auth">Sign in</Link>
+              </Button>
+            )}
+            <ThemeToggle />
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-balance max-w-3xl">
-            Predict performance.{' '}
-            <span className="text-primary">Act early.</span>
-          </h1>
-          <p className="mt-6 text-lg text-muted-foreground max-w-2xl leading-relaxed">
-            AcademiX helps students and educators understand trends, spot risks, and focus on what
-            improves outcomes—without drowning in spreadsheets.
-          </p>
-          <div className="mt-10 flex flex-wrap gap-4">
-            <Button asChild size="lg" className="gap-2">
-              <Link href="/auth">
-                Get started
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="#features">Explore features</Link>
-            </Button>
+        </div>
+      </header>
+
+      <main>
+        {/* Hero Section */}
+        <section className="relative py-24 md:py-32 lg:py-40 overflow-hidden">
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
+          </div>
+
+          <div className="container mx-auto px-4 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border bg-muted px-4 py-1.5 text-sm mb-8">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-muted-foreground">Student Result Prediction</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 text-balance">
+              Predict student{' '}
+              <span className="text-primary">performance</span>
+              <br />
+              before it matters
+            </h1>
+
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+              AI-powered insights help educators identify at-risk students early.
+              Transform raw data into actionable intelligence.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button asChild size="lg" className="h-12 px-8 gap-2">
+                <Link href="/auth">
+                  Get started free
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="h-12 px-8">
+                <Link href="#features">Learn more</Link>
+              </Button>
+            </div>
           </div>
         </section>
 
-        <section id="features" className="border-t border-border/60 bg-muted/20">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-24">
-            <h2 className="text-2xl md:text-3xl font-semibold text-center mb-4">
-              Everything you need in one place
-            </h2>
-            <p className="text-center text-muted-foreground max-w-xl mx-auto mb-14">
-              Role-based dashboards, clear visuals, and a secure sign-in flow—ready for demos and
-              classroom pilots.
-            </p>
+        {/* Features Section */}
+        <section id="features" className="py-20 md:py-28 bg-muted/30 border-y">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful features</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Everything you need to track, predict, and improve student outcomes.
+              </p>
+            </div>
+
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {features.map((feature) => (
+                <Card key={feature.title} className="transition-colors hover:bg-muted/50">
+                  <CardContent className="pt-6">
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-5">
+                      <feature.icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Stats Section */}
+        <section className="py-16 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               {[
-                {
-                  icon: LineChart,
-                  title: 'Trends & forecasts',
-                  body: 'See predicted grades and subject momentum at a glance.',
-                },
-                {
-                  icon: Users,
-                  title: 'Student & educator views',
-                  body: 'Tailored layouts for learners and instructors.',
-                },
-                {
-                  icon: Shield,
-                  title: 'Session-based auth',
-                  body: 'HTTP-only cookies and middleware-protected dashboards.',
-                },
-                {
-                  icon: BarChart3,
-                  title: 'Analytics overview',
-                  body: 'Distribution and roster insights for educators.',
-                },
-                {
-                  icon: BookOpen,
-                  title: 'Goals & subjects',
-                  body: 'Track goals and performance across courses.',
-                },
-                {
-                  icon: GraduationCap,
-                  title: 'AcademiX identity',
-                  body: 'Consistent branding and theme support across the app.',
-                },
-              ].map(({ icon: Icon, title, body }) => (
-                <div
-                  key={title}
-                  className="rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm p-6 shadow-sm"
-                >
-                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-semibold mb-2">{title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
+                { value: '94%', label: 'Prediction Accuracy' },
+                { value: '2.5x', label: 'Faster Identification' },
+                { value: '500+', label: 'Students Tracked' },
+                { value: '50+', label: 'Institutes Piloting' },
+              ].map((stat, i) => (
+                <div key={i}>
+                  <div className="text-4xl md:text-5xl font-bold text-primary mb-2">{stat.value}</div>
+                  <div className="text-sm text-muted-foreground">{stat.label}</div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="border-t border-border/60">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-            <h2 className="text-2xl md:text-3xl font-semibold mb-4">Ready to try it?</h2>
-            <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-              Use the demo accounts on the sign-in page or create a new account.
-            </p>
-            <Button asChild size="lg">
-              <Link href="/auth">Go to sign in</Link>
-            </Button>
+        {/* Team Section */}
+        <section className="py-20 md:py-28 bg-muted/30 border-y">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Built by</h2>
+              <p className="text-muted-foreground">Meet the team behind AcademiX</p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
+              {[
+                { name: 'Asmit Panday', role: 'Lead Developer' },
+                { name: 'Anmol Jain', role: 'Backend Engineer' },
+                { name: 'Aditya Yaduvanshi', role: 'ML Engineer' },
+                { name: 'Ansuman Partidar', role: 'Frontend Developer' },
+              ].map((member) => (
+                <Card key={member.name} className="text-center hover:bg-muted/50 transition-colors">
+                  <CardContent className="pt-6">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-lg font-semibold text-primary">
+                        {member.name.split(' ').map((n) => n[0]).join('')}
+                      </span>
+                    </div>
+                    <h3 className="font-medium">{member.name}</h3>
+                    <p className="text-sm text-muted-foreground">{member.role}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         </section>
 
-        <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
-          AcademiX · Student result prediction
-        </footer>
+        {/* CTA Section */}
+        <section className="py-20 md:py-28">
+          <div className="container mx-auto px-4 text-center">
+            <Card className="max-w-2xl mx-auto bg-primary/5 border-primary/10">
+              <CardContent className="pt-10 pb-10">
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to get started?</h2>
+                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                  Create an account or use demo credentials to explore AcademiX.
+                </p>
+                <Button asChild size="lg" className="h-12 px-8 gap-2">
+                  <Link href="/auth">
+                    Start for free
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t py-10">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
+              <GraduationCap className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-medium">AcademiX</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Student Result Prediction Platform
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }

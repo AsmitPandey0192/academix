@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { SESSION_COOKIE } from '@/lib/auth-constants'
 import { verifySession } from '@/lib/jwt'
 import { buildAnalyticsFromCsv, type AiInsights } from '@/lib/educator-analytics'
+import { createStudentCredentials } from '@/lib/user-store'
 
 async function getGeminiInsights(csvSample: string): Promise<AiInsights | null> {
   const apiKey = process.env.GEMINI_API_KEY
@@ -18,7 +19,7 @@ Read this CSV sample and infer metrics carefully using these units:
 - overall_cgpa and previous_sem_scgpa are out of 10
 - backlog_count is a count (integer)
 Given this CSV sample of student scores and attendance, return ONLY strict JSON:
-{+
+{
   "classSummary": "string max 220 chars",
   "keyInsights": ["string", "string", "string"],
   "recommendations": ["string", "string", "string"]
@@ -69,6 +70,32 @@ ${csvSample}`
   }
 }
 
+function parseCsvLine(line: string): string[] {
+  const result: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+      continue
+    }
+    if (char === ',' && !inQuotes) {
+      result.push(current.trim())
+      current = ''
+      continue
+    }
+    current += char
+  }
+  result.push(current.trim())
+  return result
+}
+
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies()
@@ -106,7 +133,7 @@ export async function POST(request: Request) {
     } else {
       analytics.ai = {
         classSummary:
-          'Stats are generated from your CSV. Add GEMINI_API_KEY in .env for AI narrative insights.',
+          '',
         keyInsights: [
           `Class average is ${analytics.overview.averagePerformance}% across ${analytics.overview.totalStudents} students.`,
           `${analytics.overview.atRiskStudents} students are flagged as high risk based on score and attendance.`,
@@ -119,11 +146,35 @@ export async function POST(request: Request) {
         ],
       }
     }
-    
+
+    // Extract students from CSV for credential generation
+    const lines = csvText.split(/\r?\n/).filter(l => l.trim())
+    if (lines.length >= 2) {
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''))
+      const nameIdx = headers.indexOf('name')
+      const emailIdx = headers.indexOf('email') !== -1 ? headers.indexOf('email') : headers.findIndex(h => h.includes('email'))
+      const enrollmentIdx = headers.findIndex(h => h.includes('enrollment') || h.includes('enrolment'))
+
+      if (nameIdx !== -1 && emailIdx !== -1) {
+        const students = lines.slice(1).map(line => {
+          const cells = parseCsvLine(line)
+          return {
+            name: cells[nameIdx] || '',
+            email: cells[emailIdx] || '',
+            enrollmentNumber: enrollmentIdx !== -1 ? cells[enrollmentIdx] : '',
+          }
+        }).filter(s => s.name && s.email)
+
+        if (students.length > 0) {
+          const credentials = await createStudentCredentials(session.sub, students)
+          return NextResponse.json({ ...analytics, credentials })
+        }
+      }
+    }
+
     return NextResponse.json(analytics)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not process dataset'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
-

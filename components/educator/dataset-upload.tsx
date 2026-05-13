@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Upload, CheckCircle2, FileText } from 'lucide-react'
 import type { EducatorAnalyticsPayload } from '@/lib/educator-analytics'
+import type { StudentCredential } from '@/lib/user-store'
 
 export function DatasetUpload({
   onComplete,
 }: {
-  onComplete: (payload: EducatorAnalyticsPayload) => void
+  onComplete: (payload: EducatorAnalyticsPayload & { credentials?: StudentCredential[] }) => void
 }) {
   const [uploading, setUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -44,8 +45,17 @@ export function DatasetUpload({
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Upload failed')
       }
+
+      const credentials = data.credentials as StudentCredential[] | undefined
+      const hasCredentials = credentials && credentials.length > 0
+
       onComplete(data as EducatorAnalyticsPayload)
-      setSuccessMessage('Dataset processed successfully. Dashboard updated.')
+
+      if (hasCredentials) {
+        setSuccessMessage(`Dataset processed successfully. ${credentials!.length} student account(s) generated.`)
+      } else {
+        setSuccessMessage('Dataset processed successfully. Dashboard updated.')
+      }
       setSelectedFile(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not process file')
@@ -109,9 +119,8 @@ export function DatasetUpload({
 
         <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 space-y-1">
           <p className="text-xs text-foreground">
-            Expected CSV columns: <span className="font-medium">name, enrollment_number, attendance, mst1, mst2, previous_semester, overall_cgpa, previous_sem_scgpa, skill_assignments, assignment_submissions, backlog_count</span> (MST marks are out of 20; supports common header aliases) + optional subject score columns.
+            Expected CSV columns: <span className="font-medium">name, email, enrollment_number, attendance, mst1, mst2, previous_semester, overall_cgpa, previous_sem_scgpa, skill_assignments, assignment_submissions, backlog_count</span> (MST marks are out of 20; supports common header aliases) + optional subject score columns.
           </p>
-          <p className="text-xs text-muted-foreground">Set <span className="font-medium">GEMINI_API_KEY</span> in your <span className="font-medium">.env</span> to enable AI narrative insights.</p>
         </div>
       </CardContent>
     </Card>

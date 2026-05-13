@@ -21,6 +21,7 @@ export function AuthPageContent() {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<UserRole>('student')
+  const [subject, setSubject] = useState('')
   const [error, setError] = useState('')
 
   const redirectAfterAuth = (r: UserRole) => {
@@ -208,6 +209,22 @@ export function AuthPageContent() {
                       className="h-11"
                     />
                   </div>
+                  {role === 'educator' && (
+                    <div className="space-y-2">
+                      <label htmlFor="subject" className="text-sm font-medium">
+                        Subject
+                      </label>
+                      <Input
+                        id="subject"
+                        type="text"
+                        placeholder="e.g. Mathematics, Physics"
+                        value={subject}
+                        onChange={e => setSubject(e.target.value)}
+                        disabled={isLoading}
+                        className="h-11"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <label htmlFor="reg-password" className="text-sm font-medium">
                       Password
